@@ -1,0 +1,2 @@
+ENCODING = 'cp1251'
+QUIK_PATH = 'C:\QUIK_VTB\info.exe'

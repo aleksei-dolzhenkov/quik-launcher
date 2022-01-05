@@ -1,3 +1,4 @@
+import conf
 import ctypes
 import logging
 import os
@@ -8,17 +9,11 @@ import time
 from win_input import send_scancode, send_scancode_down, send_scancode_up
 
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='[%(asctime)s] - %(levelname)s - %(message)s',
-    datefmt='%d.%m.%y %H:%M:%S'
-)
-logger = logging.getLogger(__name__)
+QUIK_DIR = os.path.dirname(conf.QUIK_PATH)
+QUIK_EXECUTABLE_NAME = os.path.split(conf.QUIK_PATH)[-1]
 
-QUIK_EXE = 'C:\QUIK_VTB\info.exe'
-QUIK_DIR = os.path.dirname(QUIK_EXE)
-CTRL = 29
-Q = 16
+CTRL_SCANCODE = 29
+Q_SCANCODE = 16
 
 BM_CLICK = 0x00F5
 SWP_NOMOVE = 0x0002
@@ -26,9 +21,16 @@ SWP_NOSIZE = 0x0001
 SWP_SHOWWINDOW = 0x0040
 WM_SETTEXT = 0x000C
 
+logging.basicConfig(
+    level=logging.INFO,
+    format='[%(asctime)s] - %(levelname)s - %(message)s',
+    datefmt='%d.%m.%y %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
+
 
 def _str(s: str):
-    return s.encode('cp1251')
+    return s.encode(conf.ENCODING)
 
 
 def find_window_a(class_, name):
@@ -41,7 +43,7 @@ def find_window_a(class_, name):
 def check_if_quik_running() -> bool:
     result = False
     for p in psutil.process_iter():
-        if p.name() == 'info.exe':
+        if p.name() == QUIK_EXECUTABLE_NAME:
             if p.cwd().lower().startswith(QUIK_DIR.lower()):
                 result = True
 
@@ -52,7 +54,7 @@ def check_if_quik_running() -> bool:
 
 def run_quik():
     logger.info('Starting QUIK')
-    subprocess.Popen([QUIK_EXE], cwd=QUIK_DIR)
+    subprocess.Popen([conf.QUIK_PATH], cwd=QUIK_DIR)
     time.sleep(5)
 
 
@@ -63,9 +65,9 @@ def check_if_logged_in():
         _size = 255
         _buffer = ctypes.create_string_buffer(255)
         ctypes.windll.user32.GetWindowTextA(parent_window, _buffer, _size)
-        _title = _buffer.value.decode('cp1251')
+        _title = _buffer.value.decode(conf.ENCODING)
 
-        if 'UID:' in _title:
+        if 'UID:' in _title:  # FIXME:
             result = True
 
     logger.info('Checking connection: %s', 'Yes' if result else 'No')
@@ -95,9 +97,9 @@ def check_if_login_dialog_opened():
 
 
 def send_ctrl_q():
-    send_scancode_down(CTRL)
-    send_scancode(Q)
-    send_scancode_up(CTRL)
+    send_scancode_down(CTRL_SCANCODE)
+    send_scancode(Q_SCANCODE)
+    send_scancode_up(CTRL_SCANCODE)
 
 
 def open_login_dialog():
@@ -126,7 +128,7 @@ def main(username, password):
 
 def run_forever():
     if not os.path.exists('credentials.txt'):
-        print('credentials.txt')
+        print('credentials.txt is missing')
         exit(1)
 
     with open('credentials.txt', 'r', encoding='utf-8') as file:
